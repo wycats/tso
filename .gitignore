@@ -1,0 +1,10 @@
+dist
+node_modules
+tmp
+*.log
+package/
+*.tgz
+DEBUG/
+ts-build/
+packages/**/*.d.ts
+packages/**/*.d.ts.map

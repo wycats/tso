@@ -1,0 +1,21 @@
+{
+  "name": "@cross-check/core",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "compile": "node scripts/build.js"
+  },
+  "devDependencies": {
+    "@types/node": "^10.7.0",
+    "@types/qunit": "^2.5.2",
+    "typescript": "^3.0.1",
+    "shelljs": "^0.8.2",
+    "path-complete-extname": "^1.0.0",
+    "mkdirp": "^0.5.1"
+  },
+  "dependencies": {
+    "no-show": "^0.6.2",
+    "ts-std": "^0.7.0-beta.1"
+  }
+}
