@@ -1,9 +1,18 @@
+#!/usr/bin/env node
+
 const shell = require("shelljs");
 
 global.PROFILE = true;
 
-exec(`node --inspect --inspect-brk ./node_modules/typescript/bin/tsc build/index.ts --target es2015 --moduleResolution node --module commonjs`);
-exec("node index.js");
+exec(
+  `tsc build/index.ts --target es2015 --moduleResolution node --module commonjs`
+);
+
+if (process.env["CHROME"]) {
+  exec("node --inspect --inspect-brk index.js");
+} else {
+  exec("node index.js");
+}
 
 function exec(command) {
   const result = shell.exec(command);

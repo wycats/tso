@@ -5,6 +5,4 @@ tmp
 package/
 *.tgz
 DEBUG/
-ts-build/
-packages/**/*.d.ts
-packages/**/*.d.ts.map
+build/*.js

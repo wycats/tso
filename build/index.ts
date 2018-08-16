@@ -1,10 +1,12 @@
+/// <reference path="./ts.d.ts">
+
 import * as ts from "typescript";
-import * as path from "path";
 import CompilerHost from "./compiler-host";
 
-global.PROFILE = true;
-
-export function compile(fileNames: string[], options: ts.CompilerOptions): void {
+export function compile(
+  fileNames: string[],
+  options: ts.CompilerOptions
+): void {
   let host = new CompilerHost();
 
   ts.performance.enable();
@@ -39,19 +41,8 @@ export function compile(fileNames: string[], options: ts.CompilerOptions): void 
     }
   });
 
+  console.log("\n");
   ts.performance.forEachMeasure((name, duration) => {
-    console.log(name, duration)
+    console.log(name, duration);
   });
-
-  let exitCode = emitResult.emitSkipped ? 1 : 0;
-  console.log(`Process exiting with code '${exitCode}'.`);
-  process.exit(exitCode);
 }
-
-
-// compile(process.argv.slice(2), {
-//   noEmitOnError: true,
-//   noImplicitAny: true,
-//   target: ts.ScriptTarget.ES5,
-//   module: ts.ModuleKind.CommonJS
-// });

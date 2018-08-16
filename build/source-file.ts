@@ -1,7 +1,8 @@
 import * as ts from "typescript";
 
 export class SourceFile implements ts.SourceFile {
-  kind: ts.SyntaxKind.SourceFile;  statements: ts.NodeArray<ts.Statement>;
+  kind: ts.SyntaxKind.SourceFile;
+  statements: ts.NodeArray<ts.Statement>;
   endOfFileToken: ts.Token<ts.SyntaxKind.EndOfFileToken>;
   fileName: string;
   text: string;
@@ -76,11 +77,12 @@ export class SourceFile implements ts.SourceFile {
   getLastToken(sourceFile?: ts.SourceFile): ts.Node {
     throw new Error("Method not implemented.");
   }
-  forEachChild<T>(cbNode: (node: ts.Node) => T, cbNodeArray?: (nodes: ts.NodeArray<ts.Node>) => T): T {
+  forEachChild<T>(
+    cbNode: (node: ts.Node) => T,
+    cbNodeArray?: (nodes: ts.NodeArray<ts.Node>) => T
+  ): T {
     throw new Error("Method not implemented.");
   }
   pos: number;
   end: number;
-
-  
 }

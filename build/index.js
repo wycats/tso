@@ -1,8 +1,8 @@
 "use strict";
+/// <reference path="./ts.d.ts">
 Object.defineProperty(exports, "__esModule", { value: true });
 const ts = require("typescript");
 const compiler_host_1 = require("./compiler-host");
-global.PROFILE = true;
 function compile(fileNames, options) {
     let host = new compiler_host_1.default();
     ts.performance.enable();
@@ -25,17 +25,9 @@ function compile(fileNames, options) {
             console.log(`${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`);
         }
     });
+    console.log("\n");
     ts.performance.forEachMeasure((name, duration) => {
         console.log(name, duration);
     });
-    let exitCode = emitResult.emitSkipped ? 1 : 0;
-    console.log(`Process exiting with code '${exitCode}'.`);
-    process.exit(exitCode);
 }
 exports.compile = compile;
-// compile(process.argv.slice(2), {
-//   noEmitOnError: true,
-//   noImplicitAny: true,
-//   target: ts.ScriptTarget.ES5,
-//   module: ts.ModuleKind.CommonJS
-// });

@@ -5,7 +5,6 @@ const path = require("path");
 const fs = require("fs");
 const utils_1 = require("./utils");
 const pathCompleteExtname = require("path-complete-extname");
-const mkdirp = require("mkdirp");
 const CONFIG = {
     useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames
 };
@@ -14,27 +13,24 @@ class CompilerHost {
         this.cwd = cwd;
     }
     getSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile) {
-        trace("getSourceFile", [fileName, languageVersion, function onError() { }, shouldCreateNewSourceFile]);
-        return ts.createSourceFile(fileName, fs.readFileSync(fileName, { encoding: "utf8" }), languageVersion, false, ts.ScriptKind.TS);
+        return tracing("getSourceFile", [fileName, languageVersion, desc("onError"), shouldCreateNewSourceFile], () => ts.createSourceFile(fileName, fs.readFileSync(fileName, { encoding: "utf8" }), languageVersion, false, ts.ScriptKind.TS), "SourceFile");
     }
     getSourceFileByPath(fileName, path, languageVersion, onError, shouldCreateNewSourceFile) {
-        trace("getSourceFileByPath", arguments);
-        throw new Error("getSourceFileByPath not implemented.");
+        return tracing("getSourceFileByPath", arguments, () => {
+            throw new Error("getSourceFileByPath not implemented.");
+        });
     }
     getCancellationToken() {
         throw unimpl("getCancellationToken", arguments);
     }
     getDefaultLibFileName(options) {
-        trace("getDefaultLibFileName", arguments);
-        return path.resolve(this.cwd, "node_modules", "typescript", "lib", "lib.es2015.d.ts");
+        return tracing("getDefaultLibFileName", arguments, () => path.resolve(this.cwd, "node_modules", "typescript", "lib", "lib.es2015.d.ts"), "Path");
     }
     getDefaultLibLocation() {
-        trace("getDefaultLibLocation", arguments);
-        return path.resolve(this.cwd, "node_modules", "typescript", "lib");
+        return tracing("getDefaultLibLocation", arguments, () => path.resolve(this.cwd, "node_modules", "typescript", "lib"));
     }
     writeFile(fileName, data, writeByteOrderMark, onError, sourceFiles) {
-        fs.writeFileSync(fileName, data);
-        trace("writeFile", [fileName]);
+        tracing("writeFile", [fileName], () => fs.writeFileSync(fileName, data));
     }
     getCurrentDirectory() {
         // trace("getCurrentDirectory", arguments);
@@ -60,34 +56,33 @@ class CompilerHost {
     }
     resolveModuleNames(moduleNames, containingFile, reusedNames) {
         return moduleNames.map(name => {
-            trace("resolveModuleNames", arguments);
-            if (utils_1.isRelative(name)) {
-                return {
-                    resolvedFileName: `${path.resolve(path.dirname(containingFile), name)}${pathCompleteExtname(containingFile)}`,
-                    isExternalModule: false
-                };
-            }
-            else {
-                let pkgDir = path.resolve(process.cwd(), "node_modules", name);
-                let pkg = require(path.join(pkgDir, "package.json"));
-                if (pkg.types) {
-                    trace("resolveModuleNames", arguments);
+            return tracing("resolveModuleNames", arguments, () => {
+                if (utils_1.isRelative(name)) {
                     return {
-                        resolvedFileName: path.join(pkgDir, pkg.types),
-                        isExternalModule: true
+                        resolvedFileName: `${path.resolve(path.dirname(containingFile), name)}${pathCompleteExtname(containingFile)}`,
+                        isExternalModule: false
                     };
                 }
                 else {
-                    console.log(`${name} from node_modules not yet implemented without types entry`);
-                    throw unimpl("resolveModuleNames", arguments);
+                    let pkgDir = path.resolve(process.cwd(), "node_modules", name);
+                    let pkg = require(path.join(pkgDir, "package.json"));
+                    if (pkg.types) {
+                        return {
+                            resolvedFileName: path.join(pkgDir, pkg.types),
+                            isExternalModule: true
+                        };
+                    }
+                    else {
+                        console.log(`${name} from node_modules not yet implemented without types entry`);
+                        throw unimpl("resolveModuleNames", arguments);
+                    }
                 }
-            }
+            });
         });
     }
     resolveTypeReferenceDirectives(typeReferenceDirectiveNames, containingFile) {
         if (typeReferenceDirectiveNames.length === 0) {
-            trace("resolveTypeReferenceDirectives", arguments);
-            return [];
+            return tracing("resolveTypeReferenceDirectives", arguments, () => []);
         }
         else {
             throw unimpl("resolveTypeReferenceDirectives", arguments);
@@ -115,12 +110,11 @@ class CompilerHost {
         throw unimpl("readFile", arguments);
     }
     trace(s) {
-        trace("trace", arguments);
+        tracing("trace", arguments, () => null);
     }
     directoryExists(directoryName) {
         if (directoryName.match(/@types/)) {
-            trace("directoryExists", arguments);
-            return false;
+            return tracing("directoryExists", arguments, () => false);
         }
         else {
             throw unimpl("directoryExists", arguments);
@@ -131,8 +125,18 @@ class CompilerHost {
     }
 }
 exports.default = CompilerHost;
-function trace(name, args) {
-    console.log(`TRACE ${name}(${joinArgs(args)})`);
+let pad = 0;
+function tracing(name, args, callback, kind) {
+    let out = callback();
+    console.group(name);
+    if (args.length > 0) {
+        console.debug(joinArgs(args));
+    }
+    if (out !== undefined) {
+        console.debug("->", toString(out, kind));
+    }
+    console.groupEnd();
+    return out;
 }
 function unimpl(name, args) {
     throw new Error(`Not implemented ${name}(${joinArgs(args)})`);
@@ -149,9 +153,34 @@ function joinArgs(args) {
     }
     return out.join(", ");
 }
-function toString(input) {
+function isSourceFile(input, kind) {
+    return kind === "SourceFile";
+}
+const DESC = Symbol("Desc");
+function desc(s) {
+    return {
+        [DESC]: true,
+        desc: s
+    };
+}
+function isDesc(value) {
+    return value && typeof value === "object" && DESC in value;
+}
+function isPath(value, kind) {
+    return kind === "Path";
+}
+function toString(input, kind) {
+    if (isSourceFile(input, kind)) {
+        return `SourceFile { fileName: ${JSON.stringify(input.fileName)} }`;
+    }
+    else if (isPath(input, kind)) {
+        return `Path { file: ${input} }`;
+    }
+    if (isDesc(input)) {
+        return input.desc;
+    }
     try {
-        let string = JSON.stringify(input);
+        let string = JSON.stringify(input, null, 2);
         if (string !== undefined) {
             return string;
         }
