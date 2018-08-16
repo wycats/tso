@@ -1,7 +1,8 @@
 {
   "name": "@cross-check/core",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "types/index.d.ts",
   "license": "MIT",
   "scripts": {
     "clean": "node scripts/clean.js",
@@ -18,6 +19,6 @@
   },
   "dependencies": {
     "no-show": "^0.6.2",
-    "ts-std": "^0.7.0-beta.1"
+    "ts-std": "^0.7.0"
   }
 }

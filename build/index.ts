@@ -1,5 +1,6 @@
 /// <reference path="./ts.d.ts">
 
+export { Project, AbsoluteFile, AbsoluteDirectory } from "./project";
 import * as ts from "typescript";
 import CompilerHost from "./compiler-host";
 
@@ -9,13 +10,14 @@ export function compile(
 ): void {
   let host = new CompilerHost();
 
-  ts.performance.enable();
+  (ts as any).performance.enable();
 
   let program = ts.createProgram({
     rootNames: fileNames,
     options,
     host
   });
+
   let emitResult = program.emit();
 
   let allDiagnostics = ts
@@ -42,7 +44,7 @@ export function compile(
   });
 
   console.log("\n");
-  ts.performance.forEachMeasure((name, duration) => {
+  (ts as any).performance.forEachMeasure((name, duration) => {
     console.log(name, duration);
   });
 }

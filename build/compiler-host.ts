@@ -82,7 +82,6 @@ export default class CompilerHost implements ts.CompilerHost {
   }
 
   getCurrentDirectory(): string {
-    // trace("getCurrentDirectory", arguments);
     return this.cwd;
   }
 
@@ -91,17 +90,14 @@ export default class CompilerHost implements ts.CompilerHost {
   }
 
   getCanonicalFileName(fileName: string): string {
-    // trace("getCanonicalFileName", arguments);
     return CONFIG.useCaseSensitiveFileNames ? fileName : fileName.toLowerCase();
   }
 
   useCaseSensitiveFileNames(): boolean {
-    // trace("useCaseSensitiveFileNames", arguments)
     return CONFIG.useCaseSensitiveFileNames;
   }
 
   getNewLine(): string {
-    // trace("getNewLine", arguments);
     return "\n";
   }
 
