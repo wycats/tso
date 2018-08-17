@@ -2,6 +2,7 @@ import * as ts from "typescript";
 import * as path from "path";
 import * as fs from "fs";
 import { isRelative } from "./utils";
+import { AbsoluteFile, AbsoluteDirectory } from "./fs/path";
 
 const pathCompleteExtname = require("path-complete-extname");
 
@@ -9,8 +10,19 @@ const CONFIG = {
   useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames
 };
 
+export interface Resolve {
+  [key: string]: AbsoluteFile;
+}
+
+export interface CompilerHostOptions {
+  resolve: Resolve;
+}
+
 export default class CompilerHost implements ts.CompilerHost {
-  constructor(private cwd = process.cwd()) {}
+  constructor(
+    private root: AbsoluteDirectory,
+    private options: CompilerHostOptions
+  ) {}
 
   getSourceFile(
     fileName: string,
@@ -55,7 +67,7 @@ export default class CompilerHost implements ts.CompilerHost {
       arguments,
       () =>
         path.resolve(
-          this.cwd,
+          this.root.path,
           "node_modules",
           "typescript",
           "lib",
@@ -67,7 +79,7 @@ export default class CompilerHost implements ts.CompilerHost {
 
   getDefaultLibLocation?(): string {
     return tracing("getDefaultLibLocation", arguments, () =>
-      path.resolve(this.cwd, "node_modules", "typescript", "lib")
+      path.resolve(this.root.path, "node_modules", "typescript", "lib")
     );
   }
 
@@ -82,7 +94,7 @@ export default class CompilerHost implements ts.CompilerHost {
   }
 
   getCurrentDirectory(): string {
-    return this.cwd;
+    return this.root.path;
   }
 
   getDirectories(path: string): string[] {
@@ -127,6 +139,14 @@ export default class CompilerHost implements ts.CompilerHost {
             isExternalModule: false
           };
         } else {
+          let custom = this.customResolve(name);
+          if (custom) {
+            return {
+              resolvedFileName: custom.path,
+              isExternalModule: true
+            };
+          }
+
           let pkgDir = path.resolve(process.cwd(), "node_modules", name);
           let pkg = require(path.join(pkgDir, "package.json"));
           if (pkg.types) {
@@ -199,6 +219,16 @@ export default class CompilerHost implements ts.CompilerHost {
   realpath?(path: string): string {
     throw unimpl("realpath", arguments);
   }
+
+  private customResolve(name: string): AbsoluteFile | null {
+    let resolve = this.options.resolve;
+
+    if (name in resolve) {
+      return resolve[name];
+    } else {
+      return null;
+    }
+  }
 }
 
 let pad = 0;
@@ -209,6 +239,10 @@ function tracing<T>(
   callback: () => T,
   kind?: "SourceFile" | "Path"
 ): T {
+  if (!process.env["TRACE"]) {
+    callback();
+  }
+
   let out = callback();
   console.group(name);
   if (args.length > 0) {
@@ -240,7 +274,7 @@ function joinArgs(args: IArguments | any[]) {
   return out.join(", ");
 }
 
-function isSourceFile(input: any, kind: string): input is ts.SourceFile {
+function isSourceFile(input: any, kind?: string): input is ts.SourceFile {
   return kind === "SourceFile";
 }
 
@@ -262,7 +296,7 @@ function isDesc(value: any): value is Desc {
   return value && typeof value === "object" && DESC in value;
 }
 
-function isPath(value: any, kind: string): value is fs.PathLike {
+function isPath(value: any, kind?: string): value is fs.PathLike {
   return kind === "Path";
 }
 

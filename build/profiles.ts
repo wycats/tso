@@ -1,8 +1,8 @@
 import * as ts from "typescript";
-import { AbsolutePath } from "./project";
-import CompilerHost from "./compiler-host";
+import CompilerHost, { Resolve } from "./compiler-host";
 import { ArtifactCompilation } from "./compilation/artifact";
 import { SimpleCompileDelegate } from "./compilation/delegate";
+import { AbsolutePath, AbsoluteDirectory } from "./fs";
 
 export enum ProfileKind {
   Package,
@@ -43,16 +43,17 @@ export class Artifact {
   readonly target: ts.ScriptTarget;
   readonly strict: StrictVersion;
   readonly react: ProjectReactOptions;
-  readonly packages: { [key: string]: AbsolutePath };
 
-  constructor(readonly entry: AbsolutePath[]) {
+  constructor(readonly entry: AbsolutePath[], readonly packages: Resolve) {
     this.target = ts.ScriptTarget.ES2018;
     this.strict = "3.0";
     this.react = { jsx: ts.JsxEmit.None };
   }
 
   compile() {
-    let host = new CompilerHost();
+    let host = new CompilerHost(AbsoluteDirectory.cwd(), {
+      resolve: this.packages
+    });
 
     let options = {
       target: this.target,

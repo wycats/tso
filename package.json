@@ -5,6 +5,7 @@
   "types": "types/index.d.ts",
   "license": "MIT",
   "scripts": {
+    "problems": "node scripts/problems.js",
     "clean": "node scripts/clean.js",
     "precompile": "yarn run clean",
     "compile": "node scripts/build.js"
@@ -13,12 +14,13 @@
     "@types/node": "^10.7.0",
     "@types/qunit": "^2.5.2",
     "typescript": "^3.0.1",
-    "shelljs": "^0.8.2",
-    "path-complete-extname": "^1.0.0",
-    "mkdirp": "^0.5.1"
+    "shelljs": "^0.8.2"
   },
   "dependencies": {
     "no-show": "^0.6.2",
-    "ts-std": "^0.7.0"
+    "ts-std": "^0.7.0",
+    "path-complete-extname": "^1.0.0",
+    "mkdirp": "^0.5.1",
+    "walk-sync": "^0.3.3"
   }
 }

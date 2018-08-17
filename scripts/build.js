@@ -5,7 +5,7 @@ const shell = require("shelljs");
 global.PROFILE = true;
 
 exec(
-  `tsc build/index.ts --target es2015 --moduleResolution node --module commonjs`
+  `tsc build/index.ts --target es2015 --moduleResolution node --module commonjs --esModuleInterop`
 );
 
 if (process.env["CHROME"]) {

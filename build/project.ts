@@ -1,26 +1,9 @@
 import * as path from "path";
 import * as fs from "fs";
-import * as ts from "typescript";
 import { Artifact } from "./profiles";
-
-export class AbsolutePath {
-  readonly path: string;
-
-  constructor(raw: string) {
-    this.path = path.resolve(raw);
-  }
-
-  join(part: string): AbsolutePath {
-    return new AbsolutePath(path.join(this.path, part));
-  }
-
-  dir(): AbsolutePath {
-    return new AbsolutePath(path.dirname(this.path));
-  }
-}
-
-export class AbsoluteFile extends AbsolutePath {}
-export class AbsoluteDirectory extends AbsolutePath {}
+import walk from "walk-sync";
+import { AbsoluteFile, AbsolutePath } from "./fs";
+import { unwrap } from "./ts";
 
 export interface ProjectSettings {
   manifest: AbsoluteFile;
@@ -33,36 +16,66 @@ export class Manifest {
 
   constructor(private absolute: AbsoluteFile) {}
 
-  get json(): object {
+  get root(): AbsolutePath {
+    return this.absolute.dir();
+  }
+
+  get json(): { [key: string]: unknown } {
     let json = this.rawJson;
 
     if (!json) {
       let manifestPath = this.absolute.path;
       let contents = fs.readFileSync(manifestPath, { encoding: "utf8" });
-      json = JSON.parse(contents);
+      json = unwrap(JSON.parse(contents)) as object;
     }
 
     return json;
   }
 
+  get main(): AbsoluteFile {
+    let main = this.json["main"] as string;
+    let resolved = path.resolve(this.absolute.dir().path, main);
+    return new AbsoluteFile(resolved);
+  }
+
   get name(): string {
-    return this.json["name"];
+    return this.json["name"] as string;
   }
 }
 
-export class Project {
-  private manifest: Manifest;
+export interface ProjectOptions {
+  manifest: AbsoluteFile;
+  test: string;
+}
 
-  constructor(private settings: ProjectSettings) {
-    this.manifest = new Manifest(settings.manifest);
+export class Project {
+  static fromOptions(options: ProjectOptions) {
+    let manifest = new Manifest(options.manifest);
+    let entry = manifest.main;
+    let tests = walk(manifest.root.path, { globs: [options.test] });
+
+    return new Project(manifest, {
+      manifest: options.manifest,
+      src: entry,
+      test: tests.map(f => new AbsoluteFile(f))
+    });
+  }
+
+  private constructor(
+    private manifest: Manifest,
+    private settings: ProjectSettings
+  ) {
+    this.manifest = manifest;
   }
 
   get src(): Artifact {
-    return new Artifact([this.settings.src]);
+    return new Artifact([this.settings.src], {});
   }
 
   get test(): Artifact {
-    return new Artifact(this.settings.test);
+    return new Artifact(this.settings.test, {
+      [this.manifest.name]: this.manifest.main
+    });
   }
 
   get name(): string {
@@ -71,6 +84,6 @@ export class Project {
 
   compile() {
     this.src.compile();
-    // this.test.compile();
+    this.test.compile();
   }
 }
