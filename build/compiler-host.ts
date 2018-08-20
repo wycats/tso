@@ -2,7 +2,8 @@ import * as ts from "typescript";
 import * as path from "path";
 import * as fs from "fs";
 import { isRelative } from "./utils";
-import { AbsoluteFile, AbsoluteDirectory } from "./fs/path";
+import { AbsoluteFile, AbsoluteDirectory, AbsolutePath } from "./fs/path";
+import { unwrap } from "./ts";
 
 const pathCompleteExtname = require("path-complete-extname");
 
@@ -16,6 +17,7 @@ export interface Resolve {
 
 export interface CompilerHostOptions {
   resolve: Resolve;
+  typescript: ts.CompilerOptions;
 }
 
 export default class CompilerHost implements ts.CompilerHost {
@@ -98,7 +100,9 @@ export default class CompilerHost implements ts.CompilerHost {
   }
 
   getDirectories(path: string): string[] {
-    throw unimpl("getDirectories", arguments);
+    return tracing("getDirectories", arguments, () =>
+      ts.sys.getDirectories(path)
+    );
   }
 
   getCanonicalFileName(fileName: string): string {
@@ -148,6 +152,10 @@ export default class CompilerHost implements ts.CompilerHost {
           }
 
           let pkgDir = path.resolve(process.cwd(), "node_modules", name);
+
+          if (!this.directoryExists(pkgDir)) {
+            return undefined;
+          }
           let pkg = require(path.join(pkgDir, "package.json"));
           if (pkg.types) {
             return {
@@ -169,11 +177,17 @@ export default class CompilerHost implements ts.CompilerHost {
     typeReferenceDirectiveNames: string[],
     containingFile: string
   ): ts.ResolvedTypeReferenceDirective[] {
-    if (typeReferenceDirectiveNames.length === 0) {
-      return tracing("resolveTypeReferenceDirectives", arguments, () => []);
-    } else {
-      throw unimpl("resolveTypeReferenceDirectives", arguments);
-    }
+    return tracing("resolveTypeReferenceDirectives", arguments, () =>
+      typeReferenceDirectiveNames.map(
+        name =>
+          ts.resolveTypeReferenceDirective(
+            name,
+            containingFile,
+            this.options.typescript,
+            this
+          ).resolvedTypeReferenceDirective!
+      )
+    );
   }
 
   getEnvironmentVariable?(name: string): string {
@@ -197,7 +211,7 @@ export default class CompilerHost implements ts.CompilerHost {
   }
 
   fileExists(fileName: string): boolean {
-    throw unimpl("fileExists", arguments);
+    return tracing("fileExists", arguments, () => ts.sys.fileExists(fileName));
   }
 
   readFile(fileName: string): string {
@@ -209,15 +223,19 @@ export default class CompilerHost implements ts.CompilerHost {
   }
 
   directoryExists?(directoryName: string): boolean {
-    if (directoryName.match(/@types/)) {
-      return tracing("directoryExists", arguments, () => false);
-    } else {
-      throw unimpl("directoryExists", arguments);
-    }
+    return tracing("directoryExists", arguments, () => {
+      // Don't find modules that aren't in the current directory.
+      // TODO: restrict to packages actually declared in the manifest.
+      if (this.root.contains(new AbsolutePath(directoryName))) {
+        return ts.sys.directoryExists(directoryName);
+      } else {
+        return false;
+      }
+    });
   }
 
   realpath?(path: string): string {
-    throw unimpl("realpath", arguments);
+    return tracing("realpath", arguments, () => unwrap(ts.sys.realpath)(path));
   }
 
   private customResolve(name: string): AbsoluteFile | null {
@@ -243,11 +261,12 @@ function tracing<T>(
     callback();
   }
 
-  let out = callback();
   console.group(name);
   if (args.length > 0) {
     console.debug(joinArgs(args));
   }
+
+  let out = callback();
 
   if (out !== undefined) {
     console.debug("->", toString(out, kind));

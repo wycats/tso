@@ -14,6 +14,10 @@ export class AbsolutePath {
   dir(): AbsoluteDirectory {
     return new AbsolutePath(path.dirname(this.path));
   }
+
+  contains(target: AbsolutePath): boolean {
+    return path.relative(this.path, target.path)[0] !== ".";
+  }
 }
 
 export class AbsoluteFile extends AbsolutePath {}

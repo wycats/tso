@@ -43,34 +43,35 @@ export class Artifact {
   readonly target: ts.ScriptTarget;
   readonly strict: StrictVersion;
   readonly react: ProjectReactOptions;
+  private typescript: ts.CompilerOptions;
 
   constructor(readonly entry: AbsolutePath[], readonly packages: Resolve) {
     this.target = ts.ScriptTarget.ES2018;
     this.strict = "3.0";
     this.react = { jsx: ts.JsxEmit.None };
+
+    this.typescript = {
+      target: this.target,
+      module: ts.ModuleKind.ES2015,
+      moduleResolution: ts.ModuleResolutionKind.NodeJs,
+      traceResolution: true
+    };
   }
 
   compile() {
     let host = new CompilerHost(AbsoluteDirectory.cwd(), {
-      resolve: this.packages
+      resolve: this.packages,
+      typescript: this.typescript
     });
-
-    let options = {
-      target: this.target,
-      module: ts.ModuleKind.ES2015
-    };
 
     let program = ts.createProgram({
       rootNames: this.entry.map(e => e.path),
       host,
-      options: {
-        target: this.target,
-        module: ts.ModuleKind.ES2015
-      }
+      options: this.typescript
     });
 
     let compilation = new ArtifactCompilation(program, {
-      typescript: options,
+      typescript: this.typescript,
       artifact: {
         delegate: new SimpleCompileDelegate(),
         performance: true
