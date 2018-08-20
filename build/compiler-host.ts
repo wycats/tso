@@ -4,6 +4,9 @@ import * as fs from "fs";
 import { isRelative } from "./utils";
 import { AbsoluteFile, AbsoluteDirectory, AbsolutePath } from "./fs/path";
 import { unwrap } from "./ts";
+import { nodeCoreModules } from "./ts/internals";
+
+import mkdirp from "mkdirp";
 
 const pathCompleteExtname = require("path-complete-extname");
 
@@ -92,6 +95,8 @@ export default class CompilerHost implements ts.CompilerHost {
     onError: ((message: string) => void) | undefined,
     sourceFiles?: ReadonlyArray<ts.SourceFile>
   ): void {
+    mkdirp.sync(path.dirname(fileName));
+
     tracing("writeFile", [fileName], () => fs.writeFileSync(fileName, data));
   }
 
@@ -132,8 +137,9 @@ export default class CompilerHost implements ts.CompilerHost {
     containingFile: string,
     reusedNames?: string[]
   ): ts.ResolvedModule[] {
-    return moduleNames.map(name => {
-      return tracing("resolveModuleNames", arguments, () => {
+    let out: ts.ResolvedModule[] = [];
+    for (let name of moduleNames) {
+      let result = tracing("resolveModuleNames", arguments, () => {
         if (isRelative(name)) {
           return {
             resolvedFileName: `${path.resolve(
@@ -151,10 +157,24 @@ export default class CompilerHost implements ts.CompilerHost {
             };
           }
 
+          if (nodeCoreModules.has(name)) {
+            return {
+              resolvedFileName: path.resolve(
+                this.root.path,
+                "node_modules",
+                "@types",
+                "node",
+                "index.d.ts"
+              ),
+              isExternalModule: true
+            };
+          }
+
+          // TODO: Restrict to packages in package.json
           let pkgDir = path.resolve(process.cwd(), "node_modules", name);
 
           if (!this.directoryExists(pkgDir)) {
-            return undefined;
+            throw new Error(`Module ${name} wasn't found in node_modules`);
           }
           let pkg = require(path.join(pkgDir, "package.json"));
           if (pkg.types) {
@@ -170,7 +190,13 @@ export default class CompilerHost implements ts.CompilerHost {
           }
         }
       });
-    });
+
+      if (result !== undefined) {
+        out.push(result);
+      }
+    }
+
+    return out;
   }
 
   resolveTypeReferenceDirectives?(
@@ -222,7 +248,7 @@ export default class CompilerHost implements ts.CompilerHost {
     tracing("trace", arguments, () => null);
   }
 
-  directoryExists?(directoryName: string): boolean {
+  directoryExists(directoryName: string): boolean {
     return tracing("directoryExists", arguments, () => {
       // Don't find modules that aren't in the current directory.
       // TODO: restrict to packages actually declared in the manifest.
@@ -258,7 +284,7 @@ function tracing<T>(
   kind?: "SourceFile" | "Path"
 ): T {
   if (!process.env["TRACE"]) {
-    callback();
+    return callback();
   }
 
   console.group(name);

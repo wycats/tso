@@ -30,6 +30,38 @@ export type JsxFactory = string;
 
 export interface Profile {}
 
+export interface ArtifactOptions {
+  readonly entry: AbsolutePath[];
+  readonly packages: Resolve;
+  readonly kind: ProfileKind;
+  readonly lastProgram?: ts.Program;
+}
+
+export interface ProjectArtifactOptions extends ArtifactOptions {
+  readonly kind: ProfileKind.Package | ProfileKind.Project;
+  readonly dist: AbsoluteDirectory;
+  readonly types: AbsoluteDirectory;
+}
+
+export interface TestArtifactOptions extends ArtifactOptions {
+  readonly kind: ProfileKind.Test;
+  readonly target: AbsoluteDirectory;
+}
+
+export function isProjectArtifact(
+  options: ArtifactOptions
+): options is ProjectArtifactOptions {
+  return (
+    options.kind === ProfileKind.Package || options.kind === ProfileKind.Project
+  );
+}
+
+export function isTestArtifact(
+  options: ArtifactOptions
+): options is TestArtifactOptions {
+  return options.kind === ProfileKind.Test;
+}
+
 /**
  * An Artifact is a description of a compilation that
  * corresponds to a combination of low-level CompileOptions
@@ -45,29 +77,48 @@ export class Artifact {
   readonly react: ProjectReactOptions;
   private typescript: ts.CompilerOptions;
 
-  constructor(readonly entry: AbsolutePath[], readonly packages: Resolve) {
+  constructor(readonly options: ProjectArtifactOptions | TestArtifactOptions) {
     this.target = ts.ScriptTarget.ES2018;
     this.strict = "3.0";
     this.react = { jsx: ts.JsxEmit.None };
 
-    this.typescript = {
+    let typescript: ts.CompilerOptions = {
       target: this.target,
       module: ts.ModuleKind.ES2015,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
+      skipLibCheck: true,
       traceResolution: true
     };
+
+    if (isProjectArtifact(options)) {
+      typescript = {
+        ...typescript,
+        declaration: true,
+        declarationMap: true,
+        declarationDir: options.types.path,
+        outDir: options.dist.path
+      };
+    } else {
+      typescript = {
+        ...typescript,
+        outDir: options.target.path
+      };
+    }
+
+    this.typescript = typescript;
   }
 
-  compile() {
+  compile(): ts.Program {
     let host = new CompilerHost(AbsoluteDirectory.cwd(), {
-      resolve: this.packages,
+      resolve: this.options.packages,
       typescript: this.typescript
     });
 
     let program = ts.createProgram({
-      rootNames: this.entry.map(e => e.path),
+      rootNames: this.options.entry.map(e => e.path),
       host,
-      options: this.typescript
+      options: this.typescript,
+      oldProgram: this.options.lastProgram
     });
 
     let compilation = new ArtifactCompilation(program, {
@@ -79,6 +130,8 @@ export class Artifact {
     });
 
     compilation.compile();
+
+    return program;
   }
 }
 

@@ -1,8 +1,9 @@
 import * as path from "path";
 import * as fs from "fs";
-import { Artifact } from "./profiles";
+import { Artifact, ProfileKind } from "./profiles";
 import walk from "walk-sync";
-import { AbsoluteFile, AbsolutePath } from "./fs";
+import * as ts from "typescript";
+import { AbsoluteFile, AbsolutePath, AbsoluteDirectory } from "./fs";
 import { unwrap } from "./ts";
 
 export interface ProjectSettings {
@@ -33,9 +34,40 @@ export class Manifest {
   }
 
   get main(): AbsoluteFile {
-    let main = this.json["main"] as string;
-    let resolved = path.resolve(this.absolute.dir().path, main);
-    return new AbsoluteFile(resolved);
+    let main = this.json["typescript:main"] as string | undefined;
+
+    if (main === undefined) {
+      let resolved = path.resolve(this.absolute.dir().path, "src", "index.ts");
+      return new AbsoluteFile(resolved);
+    } else {
+      let resolved = path.resolve(this.absolute.dir().path, main);
+      return new AbsoluteFile(resolved);
+    }
+  }
+
+  get dist(): AbsoluteDirectory {
+    // TODO: Verify that we actually end up with something in dist that matches main
+    let main = this.json["main"] as string | undefined;
+
+    if (main) {
+      let resolved = path.resolve(this.absolute.dir().path, main);
+      return new AbsoluteFile(resolved).dir();
+    } else {
+      let resolved = path.resolve(this.absolute.dir().path, "dist");
+      return new AbsoluteDirectory(resolved);
+    }
+  }
+
+  get types(): AbsoluteDirectory {
+    let types = this.json["types"] as string | undefined;
+
+    if (types) {
+      let resolved = path.resolve(this.absolute.dir().path, types);
+      return new AbsoluteFile(resolved).dir();
+    } else {
+      let resolved = path.resolve(this.absolute.dir().path, "types");
+      return new AbsoluteDirectory(resolved);
+    }
   }
 
   get name(): string {
@@ -68,13 +100,25 @@ export class Project {
     this.manifest = manifest;
   }
 
-  get src(): Artifact {
-    return new Artifact([this.settings.src], {});
+  src(lastProgram?: ts.Program): Artifact {
+    return new Artifact({
+      entry: [this.settings.src],
+      packages: {},
+      kind: ProfileKind.Project,
+      dist: this.manifest.dist,
+      types: this.manifest.types
+    });
   }
 
-  get test(): Artifact {
-    return new Artifact(this.settings.test, {
-      [this.manifest.name]: this.manifest.main
+  test(lastProgram?: ts.Program): Artifact {
+    return new Artifact({
+      entry: this.settings.test,
+      packages: {
+        [this.manifest.name]: this.manifest.types.joinToFile("index.d.ts")
+      },
+      kind: ProfileKind.Test,
+      target: this.manifest.root.joinToDir("target"),
+      lastProgram
     });
   }
 
@@ -83,7 +127,7 @@ export class Project {
   }
 
   compile() {
-    this.src.compile();
-    this.test.compile();
+    let program = this.src().compile();
+    this.test(program).compile();
   }
 }

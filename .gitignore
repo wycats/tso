@@ -11,3 +11,5 @@ build/**/*.map
 src/**/*.js
 src/**/*.d.ts
 src/**/*.map
+target/
+types/

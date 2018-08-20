@@ -11,6 +11,14 @@ export class AbsolutePath {
     return new AbsolutePath(path.join(this.path, part));
   }
 
+  joinToFile(part: string): AbsoluteFile {
+    return new AbsoluteFile(path.join(this.path, part));
+  }
+
+  joinToDir(part: string): AbsoluteDirectory {
+    return new AbsoluteDirectory(path.join(this.path, part));
+  }
+
   dir(): AbsoluteDirectory {
     return new AbsolutePath(path.dirname(this.path));
   }

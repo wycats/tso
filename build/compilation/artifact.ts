@@ -74,7 +74,7 @@ export class ArtifactCompilation {
 }
 
 function location(diagnostic: ts.Diagnostic): ts.LineAndCharacter {
-  return diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+  return diagnostic.file!.getLineAndCharacterOfPosition(diagnostic.start!);
 }
 
 function body(diagnostic: ts.Diagnostic): string {
