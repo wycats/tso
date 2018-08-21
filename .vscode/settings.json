@@ -7,6 +7,9 @@
     "**/.DS_Store": true,
     "build/**/*.js": true
   },
-  "typescript.tsdk": "node_modules\\typescript\\lib",
-  "editor.formatOnSave": true
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.tsserver.trace": "verbose",
+  "typescript.tsserver.log": "verbose",
+  "editor.formatOnSave": true,
+  "nodeTdd.activateOnStartup": false
 }

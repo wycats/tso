@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
+    "plugins": [{ "name": "../../plugin/index.js" }],
     "target": "es2015",
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,
     "strict": true
   },
-  "include": ["build"]
+  "files": ["test/core-test.ts"]
 }

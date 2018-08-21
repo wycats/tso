@@ -1,59 +1,59 @@
 import { validate, validator } from "@cross-check/core";
 
-QUnit.module("validator()");
+describe("validator()", () => {
+  test("void options using the synchronous API", async () => {
+    let isAllCaps = validator("is-all-caps", () => (input: string) =>
+      input.toUpperCase() === input
+    );
 
-QUnit.test("void options using the synchronous API", async assert => {
-  let isAllCaps = validator("is-all-caps", () => (input: string) =>
-    input.toUpperCase() === input
-  );
-
-  assert.deepEqual(await validate("hello", isAllCaps()), [
-    {
-      path: [],
-      message: {
-        name: "is-all-caps",
-        details: null
+    expect(await validate("hello", isAllCaps())).toEqual([
+      {
+        path: [],
+        message: {
+          name: "is-all-caps",
+          details: null
+        }
       }
-    }
-  ]);
+    ]);
 
-  assert.deepEqual(await validate("Hello", isAllCaps()), [
-    {
-      path: [],
-      message: {
-        name: "is-all-caps",
-        details: null
+    expect(await validate("Hello", isAllCaps())).toEqual([
+      {
+        path: [],
+        message: {
+          name: "is-all-caps",
+          details: null
+        }
       }
-    }
-  ]);
+    ]);
 
-  assert.deepEqual(await validate("HELLO", isAllCaps()), []);
-});
+    expect(await validate("HELLO", isAllCaps())).toEqual([]);
+  });
 
-QUnit.test("with options using the synchronous API", async assert => {
-  let lt = validator("lt", (upperBound: number) => (input: number) =>
-    input < upperBound
-  );
+  test("with options using the synchronous API", async () => {
+    let lt = validator("lt", (upperBound: number) => (input: number) =>
+      input < upperBound
+    );
 
-  assert.deepEqual(await validate(5, lt(5)), [
-    {
-      path: [],
-      message: {
-        name: "lt",
-        details: 5
+    expect(await validate(5, lt(5))).toEqual([
+      {
+        path: [],
+        message: {
+          name: "lt",
+          details: 5
+        }
       }
-    }
-  ]);
+    ]);
 
-  assert.deepEqual(await validate(6, lt(5)), [
-    {
-      path: [],
-      message: {
-        name: "lt",
-        details: 5
+    expect(await validate(6, lt(5))).toEqual([
+      {
+        path: [],
+        message: {
+          name: "lt",
+          details: 5
+        }
       }
-    }
-  ]);
+    ]);
 
-  assert.deepEqual(await validate(4, lt(5)), []);
+    expect(await validate(4, lt(5))).toEqual([]);
+  });
 });

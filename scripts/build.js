@@ -2,11 +2,19 @@
 
 const shell = require("shelljs");
 
-global.PROFILE = true;
+let only = process.env["ONLY"];
 
-exec(
-  `tsc build/index.ts --target es2015 --moduleResolution node --module commonjs --esModuleInterop`
-);
+if (!only || only === "build") {
+  exec(
+    `tsc build/index.ts --target es2015 --moduleResolution node --module commonjs --esModuleInterop`
+  );
+}
+
+if (!only || only === "plugin") {
+  exec(
+    `tsc plugin/index.ts --target es2015 --moduleResolution node --module commonjs --esModuleInterop`
+  );
+}
 
 if (process.env["CHROME"]) {
   exec("node --inspect --inspect-brk index.js");
