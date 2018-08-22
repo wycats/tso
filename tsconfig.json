@@ -5,7 +5,10 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "strict": true
+    "strict": true,
+    "paths": {
+      "@cross-check/core": ["src/index.ts"]
+    }
   },
-  "files": ["test/core-test.ts"]
+  "include": []
 }

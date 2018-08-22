@@ -14,30 +14,48 @@ function create(info: ts.server.PluginCreateInfo) {
     proxy[k] = (...args: Array<{}>) => x!.apply(info.languageService, args);
   }
 
-  proxy.getProgram = () => {
-    let typescript = {
-      target: ts.ScriptTarget.ES2015,
+  let root = new AbsoluteDirectory(require("path").resolve(__dirname, ".."));
+
+  info.project.projectService.openExternalProject({
+    projectFileName: root.joinToFile("package.json").path,
+    rootFiles: [
+      {
+        fileName: root.joinToDir("src").joinToFile("index.ts").path,
+        scriptKind: ts.ScriptKind.TS
+      }
+    ],
+    options: {
+      target: ts.ScriptTarget.ES2018,
       module: ts.ModuleKind.ES2015,
       moduleResolution: ts.ModuleResolutionKind.NodeJs,
       skipLibCheck: true,
       traceResolution: true
-    };
+    }
+  });
 
-    let host = new CompilerHost(AbsoluteDirectory.cwd(), {
-      resolve: {
-        "@cross-check/core": AbsoluteDirectory.cwd()
-          .joinToDir("types")
-          .joinToFile("index.d.ts")
+  info.project.projectService.openExternalProject({
+    projectFileName: root.joinToFile("package.json").path,
+    rootFiles: [
+      {
+        fileName: root.joinToDir("test").joinToFile("core-test.ts").path,
+        scriptKind: ts.ScriptKind.TS
       },
-      typescript
-    });
-
-    return ts.createProgram({
-      rootNames: [],
-      host,
-      options: typescript
-    });
-  };
+      {
+        fileName: root.joinToDir("src").joinToFile("index.ts").path,
+        scriptKind: ts.ScriptKind.TS
+      }
+    ],
+    options: {
+      target: ts.ScriptTarget.ES2018,
+      module: ts.ModuleKind.ES2015,
+      moduleResolution: ts.ModuleResolutionKind.NodeJs,
+      skipLibCheck: true,
+      traceResolution: true,
+      paths: {
+        "@cross-check/core": [root.joinToDir("src").joinToFile("index.ts").path]
+      }
+    }
+  });
 
   return proxy;
 }
